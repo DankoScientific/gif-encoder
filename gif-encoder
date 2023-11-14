@@ -1,0 +1,93 @@
+#!/bin/bash
+#: This script uses FFMPEG to make animated GIFs
+#: Copyright (c) 2023 GNU Library General Public License as published by the Free Software Foundation.
+#: by DankoScientific | gif-encoder v1.0
+
+clear # this gives us an empty terminal on startup
+
+# Starting Variables
+scene_video=$1
+start_time=$2
+scene_scale=$3
+scene_crop=$4
+file_path="/media/danko/DankoDrive" # Change to your needs
+end_of_file=$(date +%s | cut -b 7-10)
+
+if [ -z "$scene_video" ] || [ -z "$start_time" ] || [ -z "$scene_scale" ] || [ -z "$scene_crop" ]; then
+  [ -z "$scene_video" ] && echo "file required"
+  [ -z "$start_time" ] && echo "start time required"
+  [ -z "$scene_scale" ] && echo "scale required"
+  [ -z "$scene_crop" ] && echo "crop dimensions required: if no crop needed, use iw:ih"
+  exit 0
+fi
+
+printf "== gif-encoder ==%s\nFILE: $scene_video\nSTART: $start_time\nSCALE: $scene_scale\nCROP: $scene_crop\n"
+
+# Duration
+while true; do
+  IFS= read -r -p "DURATION (in seconds): " scene_duration
+  if [[ $scene_duration =~ ^[0-9]+(\.[0-9]+)?$ ]]; then
+    break
+  else
+    echo "Numbers only!"
+  fi
+done
+
+# Filename
+echo -n "FILENAME: "
+IFS= read -r scene_name
+
+w="-v 16 -stats -an"
+pal_gen="palettegen=stats_mode=diff" # generates the color palette
+palette="/tmp/palette.png"           # the palette that gets created for use
+dith_bayer="paletteuse=dither=bayer:bayer_scale=3:diff_mode=rectangle"
+dith_floydberg="paletteuse=dither=floyd_steinberg:diff_mode=rectangle"
+duration="$scene_duration"
+trim="trim=start_frame=1"
+scale="scale=iw/$scene_scale:ih/$scene_scale:flags=lanczos" # i think default flag is lanczos may not need to specify
+crop="crop=$scene_crop"
+fps="fps=15"
+subs="subtitles=/PATH/TO/SUBS/subtitle-file.srt" # if subtitles need to be added, add this variable in Pass 2 after $fps
+final_name="GIF-$scene_name-$end_of_file.gif"
+
+play_file() {
+  echo ""
+  IFS= read -e -p "Play file? y/n " -n 2 -r
+  if [[ $REPLY =~ ^[Yy]$ ]]; then
+    play $final_name 0 1
+    play_file
+  else
+    delete_file
+  fi
+}
+delete_file() {
+  IFS= read -e -p "Delete $final_name? y/n " -n 2 -r
+  if [[ $REPLY =~ ^[Yy]$ ]]; then
+    rm $final_name
+    echo "$final_name has been deleted."
+    exit 0
+  fi
+}
+move_file() {
+  if [ -d "$file_path" ]; then
+    echo ""
+    echo "Moving file: $final_name"
+    rsync --remove-source-files --info=progress2 $final_name $file_path
+    echo ""
+  else
+    echo "the directory $file_path was not found"
+    exit 0
+  fi
+}
+
+echo ""
+echo "Pass 1: Creates a color palette from the video."
+ffmpeg $w -ss $start_time -t $duration -i $scene_video -vf "$scale,$crop,$pal_gen" $palette -y # over writes palette each time w/o prompt
+
+echo ""
+echo "Pass 2: Now making the GIF using the palette we just created."
+ffmpeg $w -ss $start_time -t $duration -i $1 -i $palette -lavfi "$trim,$scale,$crop,$fps [x];[x][1:v]$dith_bayer" $final_name
+
+#move_file
+
+play_file
