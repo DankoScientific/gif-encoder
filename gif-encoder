@@ -37,7 +37,7 @@ done
 echo -n "FILENAME: "
 IFS= read -r scene_name
 
-w="-v 16 -stats -an"
+w="-v 16 -stats -an" # Sets warning to display errors only and -an strips audio
 pal_gen="palettegen=stats_mode=diff" # generates the color palette
 palette="/tmp/palette.png"           # the palette that gets created for use
 dith_bayer="paletteuse=dither=bayer:bayer_scale=3:diff_mode=rectangle"
