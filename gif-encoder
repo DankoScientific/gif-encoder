@@ -33,6 +33,13 @@ while true; do
   fi
 done
 
+# Crop
+if [ "$scene_crop" = "" ]; then
+  crop_filter="iw:ih"
+else
+  crop_filter="$scene_crop"
+fi
+
 # Filename
 echo -n "FILENAME: "
 IFS= read -r scene_name
