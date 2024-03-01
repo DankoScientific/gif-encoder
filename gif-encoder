@@ -13,11 +13,10 @@ scene_crop=$4
 file_path="/SAVED/FILE/LOCATION/" # Change to your needs
 end_of_file=$(date +%s | cut -b 7-10)
 
-if [ -z "$scene_video" ] || [ -z "$start_time" ] || [ -z "$scene_scale" ] || [ -z "$scene_crop" ]; then
+if [ -z "$scene_video" ] || [ -z "$start_time" ] || [ -z "$scene_scale" ]; then
   [ -z "$scene_video" ] && echo "file required"
   [ -z "$start_time" ] && echo "start time required"
   [ -z "$scene_scale" ] && echo "scale required"
-  [ -z "$scene_crop" ] && echo "crop dimensions required: if no crop needed, use iw:ih"
   exit 0
 fi
 
