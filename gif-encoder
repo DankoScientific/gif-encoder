@@ -10,7 +10,7 @@ scene_video=$1
 start_time=$2
 scene_scale=$3 #: TO-DO If left blank, defaults to 4 which is input width & height divided by 4
 scene_crop=$4 #: If left blank, defaults to no crop
-final_destination="/media/danko/DankoDrive" #: Change to your needs
+final_destination="/USE/YOUR/FILE/PATH/" #: Change to your needs
 end_of_file=$(date +%s | cut -b 7-10) #: Revolutionary file naming system
 
 #: Dithering variables
@@ -125,6 +125,11 @@ trim="trim=start_frame=1"
 scale="scale=iw/$scene_scale:ih/$scene_scale:flags=lanczos"
 crop_filter="crop=$scene_crop"
 fps="fps=$calc_fps"
+subs="subtitles=/PATH/TO/SUBS/subtitle-file.srt" #: if subtitles need to be added, add $subs in Pass 2 after $fps
+font_path="fontfile=/PATH/TO/FONT/FILE:fix_bounds=true" #: font file path
+text_opt1="fontsize=h/20:fontcolor=white:x=3:y=(h-th-2)" #: text size & location on screen (bottom left)
+text_opt2="text='Your text here is optional!'" #: text to display
+text_draw="drawtext=$font_path:$text_opt1:$text_opt2" #: add $text_draw in pass 2 after $crop_filter 
 final_name="$scene_name-$dithering_name-$end_of_file.gif"
 
 #: Play, delete, or move
