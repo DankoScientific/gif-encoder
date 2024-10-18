@@ -1,18 +1,78 @@
 #!/bin/bash
 #: This script uses FFMPEG to make animated GIFs
 #: Copyright (c) 2023 GNU Library General Public License as published by the Free Software Foundation.
-#: by DankoScientific | gif-encoder v1.0
+#: by DankoScientific | gif-encoder v2.0
 
-clear # this gives us an empty terminal on startup
+clear #: blank slate, baybeeeeeeee
 
-# Starting Variables
+#: Required variables
 scene_video=$1
 start_time=$2
-scene_scale=$3
-scene_crop=$4
-file_path="/SAVED/FILE/LOCATION/" # Change to your needs
-end_of_file=$(date +%s | cut -b 7-10)
+scene_scale=$3 #: TO-DO If left blank, defaults to 4 which is input width & height divided by 4
+scene_crop=$4 #: If left blank, defaults to no crop
+final_destination="/media/danko/DankoDrive" #: Change to your needs
+end_of_file=$(date +%s | cut -b 7-10) #: Revolutionary file naming system
 
+#: Dithering variables
+dith_bayer="paletteuse=dither=bayer:bayer_scale=5:diff_mode=rectangle" #: usually spits out the highest quality GIF
+dith_floydberg="paletteuse=dither=floyd_steinberg:diff_mode=rectangle"
+dith_sierra2="paletteuse=dither=sierra2:diff_mode=rectangle"
+dith_new="paletteuse=new=1:dither=bayer:bayer_scale=5:diff_mode=rectangle" #: this fuckin thing makes a NEW palette every frame
+
+#: ASCII display function
+ascii_display() {
+  echo "  ____ ___ _____     _____                     _           "
+  echo " / ___|_ _|  ___|   | ____|_ __   ___ ___   __| | ___ _ __ "
+  echo "| |  _ | || |_ _____|  _| | '_ \\ / __/ _ \\ / _\` |/ _ \\ '__|"
+  echo "| |_| || ||  _|_____| |___| | | | (_| (_) | (_| |  __/ |   "
+  echo " \\____|___|_|       |_____|_| |_|\\___\\___/ \\__,_|\\___|_|   "
+  echo ""
+}
+
+#: Function to select dithering option
+choose_dithering() {
+  echo ""
+  echo "Dithering Filter Select:"
+  echo "1. Bayer (Usually HIGHEST quality, medium filesize)"
+  echo "2. Floyd-Steinberg (High quality, good for motion, medium filesize)"
+  echo "3. Sierra2 (Default - Very good quality, lowest filesize)"
+  echo "4. New (Generate new palette each frame)"
+  echo ""
+  read -p "Enter [1-4] (blank for default): " dithering_choice
+  echo ""
+
+  case "$dithering_choice" in
+  1)
+    selected_dithering=$dith_bayer
+    dithering_name="bayer"
+    ;;
+  2)
+    selected_dithering=$dith_floydberg
+    dithering_name="floyd_steinberg"
+    ;;
+  3)
+    selected_dithering=$dith_sierra2
+    dithering_name="sierra2"
+    ;;
+  4)
+    selected_dithering=$dith_new
+    dithering_name="frames"
+    ;;
+  *)
+    echo "Defaulting to Sierra2."
+    echo ""
+    selected_dithering=$dith_sierra2
+    dithering_name="sierra2"
+    ;;
+  esac
+}
+
+#: Frame rate calculation, gets frame rate and divides by 2. BC is used to calculate decimal
+vid_framerate=$(ffprobe -v error -select_streams v:0 -show_entries stream=r_frame_rate -of default=noprint_wrappers=1:nokey=1 $scene_video)
+vid_framerate=$(echo "scale=2; $vid_framerate" | bc)
+calc_fps=$(echo "scale=2; $vid_framerate / 2.0" | bc)
+
+#: Check for required variables
 if [ -z "$scene_video" ] || [ -z "$start_time" ] || [ -z "$scene_scale" ]; then
   [ -z "$scene_video" ] && echo "file required"
   [ -z "$start_time" ] && echo "start time required"
@@ -20,11 +80,24 @@ if [ -z "$scene_video" ] || [ -z "$start_time" ] || [ -z "$scene_scale" ]; then
   exit 0
 fi
 
-printf "== gif-encoder ==%s\nFILE: $scene_video\nSTART: $start_time\nSCALE: $scene_scale\nCROP: $scene_crop\n"
+#: Begin!
+ascii_display
 
-# Duration
+printf "FILE: $scene_video\nSTART: $start_time\nSCALE: $scene_scale\nCROP: $scene_crop\n"
+
+choose_dithering
+
+#: Scale - if left blank, default scale is 4
+
+#: Duration - if left blank, defaults to 3 seconds. Allows only numerical input.
 while true; do
-  IFS= read -r -p "DURATION (in seconds): " scene_duration
+  IFS= read -r -p "DURATION (in seconds, blank defaults to 3): " scene_duration
+  if [[ -z "$scene_duration" ]]; then
+    echo "Defaulting to 3 second duration"
+    echo ""
+    scene_duration=3
+    break
+  fi
   if [[ $scene_duration =~ ^[0-9]+(\.[0-9]+)?$ ]]; then
     break
   else
@@ -32,68 +105,73 @@ while true; do
   fi
 done
 
-# Crop
-if [ "$scene_crop" = "" ]; then
+#: Crop - if left blank, defaults to no crop at all. nothin at all... nothin at all..
+if [ -z "$scene_crop" ]; then
   crop_filter="iw:ih"
 else
   crop_filter="$scene_crop"
 fi
 
-# Filename
+#: Name that shite - if left blank, should get $end_of_file at the very least
 echo -n "FILENAME: "
 IFS= read -r scene_name
 
-w="-v 16 -stats -an" # Sets warning to display errors only and -an strips audio
-pal_gen="palettegen=stats_mode=diff" # generates the color palette
-palette="/tmp/palette.png"           # the palette that gets created for use
-dith_bayer="paletteuse=dither=bayer:bayer_scale=3:diff_mode=rectangle"
-dith_floydberg="paletteuse=dither=floyd_steinberg:diff_mode=rectangle"
+#: FFMPEG variables
+w="-v 16 -stats -an"
+pal_gen="palettegen=stats_mode=diff"
+palette="/tmp/palette%04d.png"
 duration="$scene_duration"
 trim="trim=start_frame=1"
-scale="scale=iw/$scene_scale:ih/$scene_scale:flags=lanczos" # i think default flag is lanczos may not need to specify
-crop="crop=$scene_crop"
-fps="fps=15"
-subs="subtitles=/PATH/TO/SUBS/subtitle-file.srt" # if subtitles need to be added, add this variable in Pass 2 after $fps
-final_name="GIF-$scene_name-$end_of_file.gif"
+scale="scale=iw/$scene_scale:ih/$scene_scale:flags=lanczos"
+crop_filter="crop=$scene_crop"
+fps="fps=$calc_fps"
+final_name="$scene_name-$dithering_name-$end_of_file.gif"
 
+#: Play, delete, or move
 play_file() {
   echo ""
-  IFS= read -e -p "Play file? y/n " -n 2 -r
+  echo $(ls -sh /tmp/$final_name)
+  echo ""
+  IFS= read -e -p "Play $final_name? y/n " -n 2 -r
   if [[ $REPLY =~ ^[Yy]$ ]]; then
-    play $final_name 0 1
+    play /tmp/$final_name
     play_file
   else
     delete_file
   fi
 }
+
 delete_file() {
   IFS= read -e -p "Delete $final_name? y/n " -n 2 -r
   if [[ $REPLY =~ ^[Yy]$ ]]; then
-    rm $final_name
+    rm /tmp/$final_name
     echo "$final_name has been deleted."
-    exit 0
-  fi
-}
-move_file() {
-  if [ -d "$file_path" ]; then
-    echo ""
-    echo "Moving file: $final_name"
-    rsync --remove-source-files --info=progress2 $final_name $file_path
-    echo ""
+    exit 1
   else
-    echo "the directory $file_path was not found"
-    exit 0
+    move_file
   fi
 }
 
+move_file() {
+  read -e -p "Move to $final_destination Y/n " -n 3 -r
+  if [[ $REPLY =~ ^[Yy]$ ]]; then
+    rsync -av --remove-source-files --info=progress2 /tmp/$final_name $final_destination
+    echo ""
+    exit 1
+  else
+    play_file
+    exit 1
+  fi
+}
+
+#: FFMPEG Pass 1 and 2
 echo ""
 echo "Pass 1: Creates a color palette from the video."
-ffmpeg $w -ss $start_time -t $duration -i $scene_video -vf "$scale,$crop,$pal_gen" $palette -y # over writes palette each time w/o prompt
+ffmpeg $w -ss $start_time -t $duration -i $scene_video -vf "$scale,$crop_filter,$pal_gen" $palette -y
 
 echo ""
-echo "Pass 2: Now making the GIF using the palette we just created."
-ffmpeg $w -ss $start_time -t $duration -i $1 -i $palette -lavfi "$trim,$scale,$crop,$fps [x];[x][1:v]$dith_bayer" $final_name
-
-#move_file
+echo "Pass 2: Now making the GIF using the palette and selected dithering option."
+ffmpeg $w -ss $start_time -t $duration -i $scene_video -i $palette -lavfi "$trim,$scale,$crop_filter,$fps [x];[x][1:v]$selected_dithering" /tmp/$final_name
 
 play_file
+move_file
