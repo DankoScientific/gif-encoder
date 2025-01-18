@@ -20,8 +20,5 @@ CTRL+C to end it all
 
 remember since this is a BASH script you'll probably want to:
 ```
-sudo cp gif-encoder /usr/local/bin/
-```
-```
-sudo chmod +x /usr/local/bin/gif-encoder
+sudo chmod +x gif-encoder && sudo mv gif-encoder /usr/local/bin/
 ```
