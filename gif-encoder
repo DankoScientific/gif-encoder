@@ -14,10 +14,10 @@ final_destination="/USE/YOUR/FILE/PATH/" #: Change to your needs
 end_of_file=$(date +%s | cut -b 7-10) #: Revolutionary file naming system
 
 #: Dithering variables
-dith_bayer="paletteuse=dither=bayer:bayer_scale=5:diff_mode=rectangle" #: usually spits out the highest quality GIF
+dith_bayer="paletteuse=dither=bayer:bayer_scale=5:diff_mode=rectangle" 
 dith_floydberg="paletteuse=dither=floyd_steinberg:diff_mode=rectangle"
-dith_sierra2="paletteuse=dither=sierra2:diff_mode=rectangle"
-dith_new="paletteuse=new=1:dither=bayer:bayer_scale=5:diff_mode=rectangle" #: this fuckin thing makes a NEW palette every frame
+dith_sierra2="paletteuse=dither=sierra2:diff_mode=rectangle" #: usually spits out the highest quality GIF
+dith_new="paletteuse=new=1:dither=sierra2:diff_mode=rectangle" #: this fuckin thing makes a NEW palette every frame
 
 #: ASCII display function
 ascii_display() {
