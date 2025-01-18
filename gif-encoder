@@ -33,9 +33,9 @@ ascii_display() {
 choose_dithering() {
   echo ""
   echo "Dithering Filter Select:"
-  echo "1. Bayer (Usually HIGHEST quality, medium filesize)"
-  echo "2. Floyd-Steinberg (High quality, good for motion, medium filesize)"
-  echo "3. Sierra2 (Default - Very good quality, lowest filesize)"
+  echo "1. Bayer (Not great for motion)"
+  echo "2. Floyd-Steinberg (Good for motion, medium filesize)"
+  echo "3. Sierra2 (Default - Best overall)"
   echo "4. New (Generate new palette each frame)"
   echo ""
   read -p "Enter [1-4] (blank for default): " dithering_choice
